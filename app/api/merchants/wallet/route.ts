@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { db } from '@/lib/db/client'
 import { getSession } from '@/lib/auth/session'
-import { accountExists } from '@/lib/stellar/client'
+import { accountExists, checkUsdcTrustline } from '@/lib/stellar/client'
 import * as StellarSdk from '@stellar/stellar-sdk'
 
 const schema = z.object({
@@ -43,7 +43,9 @@ export async function PATCH(req: NextRequest) {
       select: { id: true, stellarPublicKey: true },
     })
 
-    return NextResponse.json({ merchant })
+    const hasTrustline = await checkUsdcTrustline(stellarPublicKey)
+
+    return NextResponse.json({ merchant, hasTrustline })
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: err.errors[0].message }, { status: 400 })

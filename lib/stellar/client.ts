@@ -2,7 +2,7 @@
  * lib/stellar/client.ts
  *
  * Core Stellar SDK integration for StellarPay.
- * Handles account creation, payment detection, and transaction verification
+ * Handles account creation, trustline checks, payment detection, and transaction verification
  * using the Stellar Horizon API on testnet.
  *
  * Stellar Testnet: https://horizon-testnet.stellar.org
@@ -52,6 +52,17 @@ export interface PaymentRecord {
   createdAt: string
 }
 
+type LoadedAccount = Awaited<ReturnType<typeof server.loadAccount>>
+
+async function loadAccount(publicKey: string): Promise<LoadedAccount | null> {
+  try {
+    return await server.loadAccount(publicKey)
+  } catch (err: unknown) {
+    if (err instanceof StellarSdk.NotFoundError) return null
+    throw err
+  }
+}
+
 // ─── Account Management ───────────────────────────────────────────────────────
 
 /**
@@ -94,13 +105,7 @@ export async function fundTestnetAccount(publicKey: string): Promise<boolean> {
  * Check if a Stellar account exists on the network.
  */
 export async function accountExists(publicKey: string): Promise<boolean> {
-  try {
-    await server.loadAccount(publicKey)
-    return true
-  } catch (err: unknown) {
-    if (err instanceof StellarSdk.NotFoundError) return false
-    throw err
-  }
+  return (await loadAccount(publicKey)) !== null
 }
 
 /**
@@ -110,7 +115,10 @@ export async function getAccountBalances(
   publicKey: string
 ): Promise<{ xlm: string; usdc: string }> {
   try {
-    const account = await server.loadAccount(publicKey)
+    const account = await loadAccount(publicKey)
+    if (!account) {
+      return { xlm: '0', usdc: '0' }
+    }
 
     let xlm = '0'
     let usdc = '0'
@@ -130,6 +138,27 @@ export async function getAccountBalances(
     return { xlm, usdc }
   } catch {
     return { xlm: '0', usdc: '0' }
+  }
+}
+
+/**
+ * Check whether a Stellar account has a USDC trustline.
+ */
+export async function checkUsdcTrustline(publicKey: string): Promise<boolean> {
+  try {
+    const account = await loadAccount(publicKey)
+    if (!account) return false
+
+    return account.balances.some(
+      balance =>
+        balance.asset_type !== 'native' &&
+        balance.asset_type !== 'liquidity_pool_shares' &&
+        balance.asset_code === 'USDC' &&
+        balance.asset_issuer === USDC_ISSUER
+    )
+  } catch (err) {
+    console.error('[Stellar] Trustline check failed:', err)
+    return false
   }
 }
 

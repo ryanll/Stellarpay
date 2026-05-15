@@ -53,7 +53,7 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-white">
             Welcome back, {merchant?.businessName} 👋
           </h1>
-          <p className="text-slate-400 mt-1">Here's your payment overview</p>
+          <p className="text-slate-400 mt-1">Your payment overview</p>
         </div>
         <Link href="/dashboard/links/new" className="btn-primary">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

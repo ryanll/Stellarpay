@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth/session'
 import { db } from '@/lib/db/client'
-import { getAccountBalances } from '@/lib/stellar/client'
+import { checkUsdcTrustline, getAccountBalances } from '@/lib/stellar/client'
 
 export async function GET() {
   try {
@@ -38,13 +38,19 @@ export async function GET() {
       return NextResponse.json({ error: 'Merchant not found' }, { status: 404 })
     }
 
-    // Fetch live Stellar balance for the merchant's wallet
+    // Fetch live Stellar wallet state for the merchant.
     let balances = { xlm: '0', usdc: '0' }
+    let hasTrustline = false
     if (merchant.stellarPublicKey) {
-      balances = await getAccountBalances(merchant.stellarPublicKey)
+      const [walletBalances, trustline] = await Promise.all([
+        getAccountBalances(merchant.stellarPublicKey),
+        checkUsdcTrustline(merchant.stellarPublicKey),
+      ])
+      balances = walletBalances
+      hasTrustline = trustline
     }
 
-    return NextResponse.json({ merchant, balances })
+    return NextResponse.json({ merchant, balances, hasTrustline })
   } catch (err) {
     console.error('[Merchants/Me]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

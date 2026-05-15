@@ -104,7 +104,7 @@ export default function CheckoutPage() {
       <div className="text-center py-16">
         <p className="text-4xl mb-4">🔒</p>
         <h2 className="text-xl font-semibold text-white mb-2">Link unavailable</h2>
-        <p className="text-slate-400 text-sm">This payment link is inactive or doesn't exist.</p>
+        <p className="text-slate-400 text-sm">This payment link is inactive or does not exist.</p>
       </div>
     </Shell>
   )
